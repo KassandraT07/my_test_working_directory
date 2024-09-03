@@ -1,0 +1,10 @@
+.Rproj.user/
+Figures/
+Data/
+Google Earth/
+*.Rhistory
+*.docx
+*.jpg
+*.png
+*.tiff
+*.tif

@@ -1,0 +1,81 @@
+https://cran.r-project.org/web/packages/unmarked/vignettes/unmarked.html
+
+https://kevintshoemaker.github.io/NRES-746/Occupancy.html
+
+https://jamesepaterson.github.io/jamespatersonblog/2020-11-09_occupancy_part2.html
+
+# occupancy modeling example
+# 12/7/2023
+
+rm(list=ls())
+
+
+setwd("C:/Users/fiona/Documents/UIdaho/WorkingGroup/Occupancy")
+
+#Load packages
+#library(dplyr)
+library(tidyverse)
+library(boot)
+library(unmarked)
+library(MuMIn)
+
+
+data <- read.csv("Data/PLC_example_data.csv") %>%
+  glimpse()
+
+
+detection <- data%>% 
+  dplyr::select(2:6) %>%
+  glimpse()
+
+#A "site covariate" refers to a variable that is specific to a particular location or 
+#study site and remains constant over time, while an "observational covariate" is a 
+#variable that can change during an observation period at a single site, meaning it is
+#measured at the time of each observation and may vary between observations at the same site
+
+site_covs <- data %>% 
+  dplyr::select(deciduous80, subalp80,herbaceous80,dead80, rimo.mean ) %>%
+  glimpse()
+
+obs_covs <- list(temp =  dplyr::select(data, MEAN_IBUTT1:MEAN_IBUTT5 )) %>%
+  glimpse()
+
+occupancy.data <- unmarkedFrameOccu(y=detection, siteCovs = site_covs, obsCovs = obs_covs)
+summary(occupancy.data)
+
+#occupancy.data <- unmarkedFrameOccu(y=detection, siteCovs = NULL, obsCovs = NULL)
+
+############################################################################
+
+occu(~1  ~1, data=occupancy.data) %>% summary()
+inv.logit(-0.685)
+
+
+null_mod <- occu(~1  ~1, data=occupancy.data) 
+
+
+# adding covariates
+mod_rimo <- occu(~1 ~rimo.mean, data=occupancy.data)
+mod_det <- occu(~temp ~1, data=occupancy.data) 
+mod_combo <-  occu(~temp ~rimo.mean, data=occupancy.data) 
+
+
+# model dredging
+mod_global <- occu(~temp  ~rimo.mean+subalp80+deciduous80+dead80, data=occupancy.data)
+mod.dredge <- dredge(mod_global)
+mod.dredge
+
+###########################################################################
+######################Notes from other resources###########################
+
+##have log-odds of occ and detection, can convert to probabilities using
+#backTransform() function
+backTransform(linearComb(mod_quality, coefficients = c(1,0),"state"))
+
+
+#If not all sites have the same numbers of observations, then manual importation of data
+#in long format can be tricky. csvToUMF seamlessly handles this situation.
+
+pcru <- csvToUMF(system.file("csv","frog2001pcru.csv", package="unmarked"),
+                 long = TRUE, type = "unmarkedFrameOccu")
+
